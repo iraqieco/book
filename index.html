@@ -6,28 +6,44 @@
     <title>موسوعة الكائنات الحية في العراق</title>
     <style>
         body { font-family: Tahoma, sans-serif; background: #f9f9f9; color: #333; margin: 0; padding: 20px; }
-        header { text-align: center; margin-bottom: 30px; }
-        .search-box { width: 100%; max-width: 600px; padding: 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 6px; display: block; margin: 0 auto 20px auto; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; max-width: 1200px; margin: 0 auto; }
-        .card { background: #fff; border: 1px solid #e1e1e1; border-radius: 8px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); cursor: pointer; transition: transform 0.2s; }
-        .card:hover { transform: translateY(-3px); }
-        .card h3 { margin: 0 0 5px 0; color: #0066cc; }
-        .card i { color: #666; font-size: 14px; display: block; margin-bottom: 10px; }
-        .badge { display: inline-block; background: #eef2f7; color: #333; padding: 3px 8px; border-radius: 4px; font-size: 12px; }
-        .admin-link { position: absolute; top: 20px; left: 20px; text-decoration: none; background: #333; color: #fff; padding: 8px 15px; border-radius: 4px; font-size: 14px; }
+        header { text-align: center; margin-bottom: 25px; }
+        .search-box { width: 100%; max-width: 600px; padding: 10px; font-size: 15px; border: 1px solid #ccc; border-radius: 4px; display: block; margin: 0 auto 15px auto; }
+        
+        table { width: 100%; max-width: 1100px; margin: 0 auto; border-collapse: collapse; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        th, td { border: 1px solid #e1e1e1; padding: 12px; text-align: right; font-size: 14px; }
+        th { background: #0066cc; color: white; }
+        tr:nth-child(even) { background: #fdfdfd; }
+        tr:hover { background: #f1f7ff; }
+        .scientific-col { font-style: italic; color: #555; }
+        .admin-link { position: absolute; top: 15px; left: 15px; color: #0066cc; text-decoration: none; font-size: 14px; }
+        .admin-link:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
 
-    <a href="admin.html" class="admin-link">لوحة التحكم</a>
+    <a href="admin.html" class="admin-link">تسجيل دخول المخول (لوحة التحكم)</a>
     
     <header>
         <h1>الكائنات الحية في العراق</h1>
-        <p>موسوعة توثيقية بيئية تفاعلية</p>
+        <p>قائمة توثيقية بيئية متسلسلة</p>
         <input type="text" id="searchInput" class="search-box" placeholder="ابحث بالاسم العربي أو العلمي...">
     </header>
 
-    <div id="organismsGrid" class="grid"></div>
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>الاسم العربي</th>
+                <th>الاسم العلمي</th>
+                <th>المملكة</th>
+                <th>الصنف</th>
+                <th>حالة الحفظ</th>
+            </tr>
+        </thead>
+        <tbody id="organismsTableBody">
+            <tr><td colspan="6" style="text-align:center;">جاري تحميل البيانات...</td></tr>
+        </tbody>
+    </table>
 
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
@@ -41,33 +57,33 @@
         async function fetchOrganisms() {
             const { data, error } = await supabase.from('organisms').select('*');
             if (error) {
-                console.error('خطأ في جلب البيانات:', error);
+                console.error(error);
                 return;
             }
             allOrganisms = data;
-            displayOrganisms(allOrganisms);
+            renderTable(allOrganisms);
         }
 
-        function displayOrganisms(items) {
-            const grid = document.getElementById('organismsGrid');
-            grid.innerHTML = '';
-            
+        function renderTable(items) {
+            const tbody = document.getElementById('organismsTableBody');
+            tbody.innerHTML = '';
+
             if (items.length === 0) {
-                grid.innerHTML = '<p style="text-align:center; grid-column:1/-1;">لا توجد نتائج مطابقة.</p>';
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">لا توجد بيانات مسجلة.</td></tr>';
                 return;
             }
 
-            items.forEach(org => {
-                const card = document.createElement('div');
-                card.className = 'card';
-                card.onclick = () => { window.location.href = `organism.html?id=${org.id}`; };
-                
-                card.innerHTML = `
-                    <h3>${org.name_ar || 'بدون اسم'}</h3>
-                    <i>${org.scientific_name || ''}</i>
-                    <div><span class="badge">${org.kingdom || 'غير محدد'}</span> <span class="badge">${org.class || ''}</span></div>
+            items.forEach((org, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td><a href="organism.html?id=${org.id}" style="color:#0066cc; text-decoration:none; font-weight:bold;">${org.name_ar || 'بدون اسم'}</a></td>
+                    <td class="scientific-col">${org.scientific_name || ''}</td>
+                    <td>${org.kingdom || '-'}</td>
+                    <td>${org.class || '-'}</td>
+                    <td>${org.conservation_status || '-'}</td>
                 `;
-                grid.appendChild(card);
+                tbody.appendChild(tr);
             });
         }
 
@@ -77,7 +93,7 @@
                 (o.name_ar && o.name_ar.toLowerCase().includes(term)) || 
                 (o.scientific_name && o.scientific_name.toLowerCase().includes(term))
             );
-            displayOrganisms(filtered);
+            renderTable(filtered);
         });
 
         fetchOrganisms();
