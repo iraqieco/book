@@ -55,7 +55,12 @@
         let allOrganisms = [];
 
         async function fetchOrganisms() {
-            const { data, error } = await supabase.from('organisms').select('*');
+            // جلب البيانات مع تجاوز حد 1000 نتيجة (حتى 10,000 سجل)
+            const { data, error } = await supabase
+                .from('organisms')
+                .select('*')
+                .range(0, 9999);
+
             if (error) {
                 console.error(error);
                 return;
