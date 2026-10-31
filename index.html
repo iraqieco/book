@@ -2,489 +2,85 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>موسوعة عراقي إيكو - لوحة تأليف الكتب التخصصية</title>
-    <!-- استدعاء Supabase Client -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- استدعاء مكتبات تحويل وتنزيل PDF و Word -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/html-docx-js@0.3.1/dist/html-docx.js"></script>
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>موسوعة الكائنات الحية في العراق</title>
     <style>
-        :root {
-            --primary-dark: #1b4d3e;
-            --primary-medium: #2e6f5c;
-            --primary-light: #e8f5e9;
-            --bg-color: #ffffff;
-            --text-color: #2c3e50;
-            --border-color: #c8e6c9;
-        }
-
-        body {
-            font-family: 'Traditional Arabic', serif, Arial;
-            background-color: #f4f9f4;
-            color: var(--text-color);
-            margin: 0;
-            padding: 20px;
-        }
-
-        .control-panel {
-            max-width: 900px;
-            margin: 0 auto 20px auto;
-            background: #ffffff;
-            padding: 25px;
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(27, 77, 62, 0.15);
-            border-top: 6px solid var(--primary-dark);
-        }
-
-        .control-panel h2 {
-            color: var(--primary-dark);
-            margin-top: 0;
-            font-size: 22px;
-        }
-
-        .control-group {
-            margin-bottom: 15px;
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-
-        .control-group label {
-            font-weight: bold;
-            font-size: 14px;
-            color: var(--primary-medium);
-        }
-
-        .control-group select, .control-group button {
-            padding: 10px;
-            font-family: 'Traditional Arabic', serif;
-            font-size: 16px;
-            border-radius: 4px;
-            border: 1px solid var(--border-color);
-        }
-
-        .btn-start {
-            background-color: var(--primary-dark);
-            color: white;
-            font-weight: bold;
-            cursor: pointer;
-            border: none;
-            transition: 0.2s;
-        }
-        .btn-start:hover { background-color: var(--primary-medium); }
-
-        .btn-stop {
-            background-color: #d32f2f;
-            color: white;
-            font-weight: bold;
-            cursor: pointer;
-            border: none;
-            display: none;
-            margin-top: 10px;
-        }
-
-        .progress-container {
-            width: 100%;
-            background-color: #e0e0e0;
-            border-radius: 4px;
-            margin-top: 15px;
-            overflow: hidden;
-            display: none;
-        }
-        .progress-bar {
-            width: 0%;
-            height: 22px;
-            background-color: var(--primary-medium);
-            text-align: center;
-            color: white;
-            font-size: 13px;
-            line-height: 22px;
-            transition: width 0.3s ease;
-        }
-
-        .download-bar {
-            max-width: 900px;
-            margin: 0 auto 20px auto;
-            background: var(--primary-dark);
-            padding: 15px;
-            border-radius: 6px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            color: white;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-        }
-
-        .download-bar button {
-            background-color: #ffffff;
-            color: var(--primary-dark);
-            border: none;
-            padding: 8px 16px;
-            font-weight: bold;
-            border-radius: 4px;
-            cursor: pointer;
-            font-family: 'Traditional Arabic', serif;
-            font-size: 15px;
-        }
-
-        .book-container {
-            max-width: 900px;
-            margin: 0 auto;
-            background: var(--bg-color);
-            padding: 50px;
-            box-shadow: 0 4px 20px rgba(27, 77, 62, 0.1);
-            border-radius: 4px;
-            border-top: 8px solid var(--primary-dark);
-            border-bottom: 8px solid var(--primary-dark);
-            min-height: 500px;
-        }
-
-        .book-title-page {
-            text-align: center;
-            height: 700px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            page-break-after: always;
-        }
-
-        .page {
-            page-break-after: always;
-            min-height: 850px;
-            border-bottom: 2px dashed var(--border-color);
-            padding-bottom: 40px;
-            margin-bottom: 40px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-
-        .species-header {
-            font-size: 26px;
-            font-weight: bold;
-            color: var(--primary-dark);
-            border-bottom: 3px solid var(--primary-medium);
-            padding-bottom: 8px;
-            margin-bottom: 20px;
-        }
-
-        .content-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 25px;
-            align-items: start;
-        }
-
-        .image-container img {
-            width: 100%;
-            height: 300px;
-            object-fit: cover;
-            border-radius: 4px;
-            border: 1px solid var(--border-color);
-        }
-
-        .image-credit {
-            font-size: 11px;
-            color: #555;
-            background: var(--primary-light);
-            padding: 4px 8px;
-            margin-top: 5px;
-            border-radius: 3px;
-            border-right: 3px solid var(--primary-medium);
-        }
-
-        .iucn-badge {
-            display: block;
-            padding: 6px 12px;
-            font-size: 13px;
-            font-weight: bold;
-            color: white;
-            border-radius: 4px;
-            margin-top: 10px;
-            text-align: center;
-        }
-        .iucn-ex { background-color: #000000; }
-        .iucn-ew { background-color: #5218fa; }
-        .iucn-cr { background-color: #d32f2f; }
-        .iucn-en { background-color: #f57c00; }
-        .iucn-vu { background-color: #fbc02d; color: #333; }
-        .iucn-nt { background-color: #c0ca33; color: #333; }
-        .iucn-lc { background-color: #388e3c; }
-        .iucn-dd, .iucn-ne { background-color: #9e9e9e; }
-
-        .taxonomy-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-            font-size: 14px;
-        }
-
-        .taxonomy-table th, .taxonomy-table td {
-            border: 1px solid var(--border-color);
-            padding: 6px 10px;
-            text-align: right;
-        }
-
-        .taxonomy-table th {
-            background-color: var(--primary-medium);
-            color: white;
-            font-weight: normal;
-        }
-
-        .description-text {
-            line-height: 1.9;
-            text-align: justify;
-            font-size: 15px;
-            color: #333;
-        }
-
-        .scientific-sources {
-            margin-top: 20px;
-            background-color: #fafdfa;
-            border: 1px solid var(--border-color);
-            padding: 10px;
-            border-radius: 4px;
-            font-size: 12px;
-        }
+        body { font-family: Tahoma, sans-serif; background: #f9f9f9; color: #333; margin: 0; padding: 20px; }
+        header { text-align: center; margin-bottom: 30px; }
+        .search-box { width: 100%; max-width: 600px; padding: 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 6px; display: block; margin: 0 auto 20px auto; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; max-width: 1200px; margin: 0 auto; }
+        .card { background: #fff; border: 1px solid #e1e1e1; border-radius: 8px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); cursor: pointer; transition: transform 0.2s; }
+        .card:hover { transform: translateY(-3px); }
+        .card h3 { margin: 0 0 5px 0; color: #0066cc; }
+        .card i { color: #666; font-size: 14px; display: block; margin-bottom: 10px; }
+        .badge { display: inline-block; background: #eef2f7; color: #333; padding: 3px 8px; border-radius: 4px; font-size: 12px; }
+        .admin-link { position: absolute; top: 20px; left: 20px; text-decoration: none; background: #333; color: #fff; padding: 8px 15px; border-radius: 4px; font-size: 14px; }
     </style>
 </head>
 <body>
 
-    <div class="control-panel" id="controlPanel">
-        <h2>⚙️ لوحة تحكم تأليف الكتب البيئية</h2>
-        
-        <div class="control-group">
-            <label for="classSelect">اختر الصنف المراد البدء به:</label>
-            <select id="classSelect">
-                <option value="">اختر الصنف...</option>
-                <option value="طيور">طيور</option>
-                <option value="زواحف">زواحف</option>
-                <option value="ثدييات">ثدييات</option>
-              <option value="برمائيات">برمائيات</option>
-                <option value="نباتات">نباتات</option>
-            </select>
-        </div>
+    <a href="admin.html" class="admin-link">لوحة التحكم</a>
+    
+    <header>
+        <h1>الكائنات الحية في العراق</h1>
+        <p>موسوعة توثيقية بيئية تفاعلية</p>
+        <input type="text" id="searchInput" class="search-box" placeholder="ابحث بالاسم العربي أو العلمي...">
+    </header>
 
-        <div class="control-group">
-            <label for="modeSelect">طريقة التأليف:</label>
-            <select id="modeSelect">
-                <option value="single">تأليف هذا الصنف فقط ثم التوقف</option>
-                <option value="all">استمرار وتأليف جميع الأصناف تباعاً حتى النهاية</option>
-            </select>
-        </div>
+    <div id="organismsGrid" class="grid"></div>
 
-        <button class="btn-start" onclick="startGeneration()">بدء تأليف الكتاب 🚀</button>
-        <button class="btn-stop" id="stopBtn" onclick="stopGeneration()">إيقاف العملية ⏹️</button>
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-        <div class="progress-container" id="progressContainer">
-            <div class="progress-bar" id="progressBar">0%</div>
-        </div>
-    </div>
-
-    <div class="download-bar" id="downloadBar" style="display:none;">
-        <span>📚 تم تأليف الكتاب بنجاح: <strong id="bookCategoryName"></strong></span>
-        <div>
-            <button onclick="downloadPDF()">تنزيل PDF 📥</button>
-            <button onclick="downloadWord()" style="margin-right: 10px;">تنزيل ملف Word 📝</button>
-        </div>
-    </div>
-
-    <div class="book-container" id="bookContent">
-        <div class="book-title-page">
-            <h1>موسوعة عراقي إيكو</h1>
-            <p>اختر الصنف من لوحة التحكم بالأعلى واضغط على "بدء تأليف الكتاب" لمشاهدة الصفحات تتشكل لحظة بلحظة.</p>
-        </div>
-    </div>
-
-    <script>
         const SUPABASE_URL = 'https://rmqtopxawrrgntcqqnpa.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJtcXRvcHhhd3JyZ250Y3FxbnBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3OTIxMzQsImV4cCI6MjA5ODM2ODEzNH0.HoExHY9oNFdryWUC2u2UELLPfBNhH3P4L3zS03dvELA';
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJtcXRvcHhhd3JyZ250Y3FxbnBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3OTIxMzQsImV4cCI6MjA5ODM2ODEzNH0.HoExHY9oNFdryWUC2u2UELLPfBNhH3P4L3zS03dvELA';
+        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        let isRunning = false;
+        let allOrganisms = [];
 
-        // جلب الأصناف الفعليّة من القاعدة بطريقة خفيفة وسريعة
-        async function loadAvailableClasses() {
-            try {
-                const { data, error } = await supabase.from('organisms').select('class');
-                if (!error && data && data.length > 0) {
-                    const uniqueClasses = [...new Set(data.map(item => item.class))].filter(Boolean);
-                    const select = document.getElementById('classSelect');
-                    select.innerHTML = '<option value="">اختر الصنف...</option>';
-                    uniqueClasses.forEach(cls => {
-                        const opt = document.createElement('option');
-                        opt.value = cls;
-                        opt.textContent = cls;
-                        select.appendChild(opt);
-                    });
-                }
-            } catch (e) {
-                console.error("خطأ في جلب الأصناف:", e);
+        async function fetchOrganisms() {
+            const { data, error } = await supabase.from('organisms').select('*');
+            if (error) {
+                console.error('خطأ في جلب البيانات:', error);
+                return;
             }
-        }
-        loadAvailableClasses();
-
-        async function fetchExternalData(scientificName) {
-            try {
-                const res = await fetch(`https://ar.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(scientificName)}`);
-                let summary = "لا يتوفر وصف تفصيلي بالعربية حالياً، يُعتمد على السجلات المخزنة.";
-                let imageUrl = "https://via.placeholder.com/400x300?text=No+Image";
-                let imageCredit = "مشاع إبداعي / ملكية عامة";
-                let wikiUrl = "#";
-
-                if (res.ok) {
-                    const data = await res.json();
-                    summary = data.extract || summary;
-                    if (data.thumbnail) imageUrl = data.thumbnail.source;
-                    wikiUrl = data.content_urls?.desktop?.page || "#";
-                }
-                return { summary, imageUrl, imageCredit, wikiUrl, iucnData: { code: 'lc', name: 'Least Concern (أقل قلقاً)' } };
-            } catch (e) {
-                return { summary: "بيانات محلية موثقة.", imageUrl: "https://via.placeholder.com/400x300", imageCredit: "غير محدد", wikiUrl: "#", iucnData: { code: 'ne', name: 'غير مقيّم' } };
-            }
+            allOrganisms = data;
+            displayOrganisms(allOrganisms);
         }
 
-        function stopGeneration() {
-            isRunning = false;
-            document.getElementById('stopBtn').style.display = 'none';
-            document.querySelector('.btn-start').style.display = 'inline-block';
-            alert("تم إيقاف عملية التأليف بناءً على طلبك.");
-        }
-
-        async function startGeneration() {
-            const selectedClass = document.getElementById('classSelect').value;
-            const mode = document.getElementById('modeSelect').value;
-            const container = document.getElementById('bookContent');
-            const progressBar = document.getElementById('progressBar');
-            const progressContainer = document.getElementById('progressContainer');
+        function displayOrganisms(items) {
+            const grid = document.getElementById('organismsGrid');
+            grid.innerHTML = '';
             
-            if (!selectedClass) {
-                alert("الرجاء اختيار صنف صحيح من القائمة أولاً.");
+            if (items.length === 0) {
+                grid.innerHTML = '<p style="text-align:center; grid-column:1/-1;">لا توجد نتائج مطابقة.</p>';
                 return;
             }
 
-            isRunning = true;
-            document.querySelector('.btn-start').style.display = 'none';
-            document.getElementById('stopBtn').style.display = 'inline-block';
-            progressContainer.style.display = 'block';
-            document.getElementById('downloadBar').style.display = 'none';
-
-            let query = supabase.from('organisms').select('*');
-            if (mode === 'single') {
-                query = query.eq('class', selectedClass);
-            }
-
-            const { data: records, error } = await query;
-
-            if (error || !records || records.length === 0) {
-                container.innerHTML = `<h1>عذراً</h1><p style="text-align:center; color:red;">لا توجد سجلات مطابقة في قاعدة البيانات.</p>`;
-                stopGeneration();
-                return;
-            }
-
-            let bookHTML = `
-                <div class="book-title-page">
-                    <h1>الموسوعة البيئية العراقية</h1>
-                    <h3>سجل أصناف: (${selectedClass})</h3>
-                    <p style="margin-top: 30px; color: #555;">منصة عراقي إيكو - توثيق علمي ومصادر معتمدة</p>
-                </div>
-            `;
-            container.innerHTML = bookHTML;
-
-            let total = records.length;
-            for (let i = 0; i < total; i++) {
-                if (!isRunning) break;
-
-                let record = records[i];
-                const extData = await fetchExternalData(record.scientific_name);
-
-                bookHTML += `
-                    <div class="page">
-                        <div class="species-header">${record.name_ar || record.scientific_name} <span style="font-size: 18px; font-weight: normal; color: #2e6f5c;">(${record.scientific_name})</span></div>
-                        
-                        <div class="content-grid">
-                            <div class="image-column">
-                                <div class="image-container">
-                                    <img src="${extData.imageUrl}" alt="${record.scientific_name}" crossorigin="anonymous">
-                                </div>
-                                <div class="image-credit">
-                                    <strong>حقوق الصورة:</strong> ${extData.imageCredit}
-                                </div>
-
-                                <div class="iucn-badge iucn-${extData.iucnData.code}">
-                                    حالة الحفظ: ${extData.iucnData.name}
-                                </div>
-
-                                <table class="taxonomy-table">
-                                    <tr><th>المملكة</th><td>${record.kingdom || 'الحيوانات'}</td></tr>
-                                    <tr><th>الشعبة</th><td>${record.phylum || 'غير محدد'}</td></tr>
-                                    <tr><th>الصنف (Class)</th><td>${record.class}</td></tr>
-                                    <tr><th>الفصيلة</th><td>${record.family || 'غير محدد'}</td></tr>
-                                    <tr><th>الجنس</th><td>${record.genus || 'غير محدد'}</td></tr>
-                                </table>
-                            </div>
-
-                            <div class="text-column">
-                                <div class="description-text">
-                                    <p><strong>الشرح والتوثيق المفصل:</strong></p>
-                                    <p>${record.description || extData.summary}</p>
-                                </div>
-
-                                <div class="scientific-sources">
-                                    <strong>المصادر والهامش المعتمد:</strong><br>
-                                    - القائمة الحمراء للأنواع المهددة بالانقراض (IUCN Red List)<br>
-                                    - ويكيبيديا الموسوعة الحرة: <a href="${extData.wikiUrl}" target="_blank">رابط المصدر</a><br>
-                                    - قواعد بيانات عراقي إيكو.
-                                </div>
-                            </div>
-                        </div>
-
-                        <div style="font-size: 11px; text-align: center; color: #7f8c8d; border-top: 1px solid #eee; padding-top: 5px;">
-                            سجل توثيقي لصنف ${record.class} - العراق
-                        </div>
-                    </div>
+            items.forEach(org => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.onclick = () => { window.location.href = `organism.html?id=${org.id}`; };
+                
+                card.innerHTML = `
+                    <h3>${org.name_ar || 'بدون اسم'}</h3>
+                    <i>${org.scientific_name || ''}</i>
+                    <div><span class="badge">${org.kingdom || 'غير محدد'}</span> <span class="badge">${org.class || ''}</span></div>
                 `;
-
-                container.innerHTML = bookHTML;
-
-                let percent = Math.round(((i + 1) / total) * 100);
-                progressBar.style.width = percent + '%';
-                progressBar.innerText = `جاري التأليف: ${percent}% (${i + 1} من ${total})`;
-            }
-
-            if (isRunning) {
-                document.getElementById('bookCategoryName').innerText = selectedClass;
-                document.getElementById('downloadBar').style.display = 'flex';
-                document.getElementById('stopBtn').style.display = 'none';
-                document.querySelector('.btn-start').style.display = 'inline-block';
-                isRunning = false;
-            }
+                grid.appendChild(card);
+            });
         }
 
-        function downloadPDF() {
-            const element = document.getElementById('bookContent');
-            const opt = {
-                margin:       10,
-                filename:     `کتاب_الموسوعة_عراقي_إيكو.pdf`,
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true },
-                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            };
-            html2pdf().from(element).set(opt).save();
-        }
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            const filtered = allOrganisms.filter(o => 
+                (o.name_ar && o.name_ar.toLowerCase().includes(term)) || 
+                (o.scientific_name && o.scientific_name.toLowerCase().includes(term))
+            );
+            displayOrganisms(filtered);
+        });
 
-        function downloadWord() {
-            const contentHTML = document.getElementById('bookContent').innerHTML;
-            const converted = htmlDocx.asBlob(`<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>${contentHTML}</body></html>`);
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(converted);
-            link.download = `کتاب_الموسوعة_عراقي_إيكو.docx`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
+        fetchOrganisms();
     </script>
 </body>
 </html>
