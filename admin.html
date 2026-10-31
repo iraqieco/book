@@ -6,7 +6,7 @@
     <title>لوحة التحكم - عراقي إيكو</title>
     <style>
         body { font-family: Tahoma, sans-serif; background: #f4f6f9; color: #333; margin: 0; padding: 20px; }
-        .container { max-width: 900px; margin: 20px auto; background: #fff; padding: 25px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .container { max-width: 1000px; margin: 20px auto; background: #fff; padding: 25px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .form-control { width: 100%; padding: 10px; margin: 6px 0 14px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
         button { background: #0066cc; color: #fff; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 15px; }
         button:hover { background: #004d99; }
@@ -22,7 +22,7 @@
     <div class="container">
         <a href="index.html" style="color:#0066cc; text-decoration:none;">← العودة إلى الموقع الرئيسي</a>
         
-        <!-- نموذج تسجيل الدخول عبر Supabase Auth -->
+        <!-- نموذج تسجيل الدخول -->
         <div id="loginSection" style="margin-top: 30px; text-align: center; max-width: 400px; margin-left: auto; margin-right: auto;">
             <h2>تسجيل دخول المخول</h2>
             <p>أدخل بيانات الحساب المسجل في قاعدة البيانات:</p>
@@ -32,7 +32,7 @@
             <p id="loginError" style="color:red; margin-top:10px;"></p>
         </div>
 
-        <!-- لوحة التحكم (تظهر فقط بعد نجاح تسجيل الدخول) -->
+        <!-- لوحة التحكم -->
         <div id="adminPanel" style="display:none; margin-top: 20px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <h2 id="formTitle">إضافة كائن حي جديد</h2>
@@ -71,10 +71,16 @@
             <button id="saveOrgBtn">حفظ البيانات</button>
             <button id="cancelEditBtn" style="background:#888; display:none;">إلغاء التعديل</button>
 
-            <h3 style="margin-top:40px;">إدارة الكائنات المسجلة</h3>
+            <hr style="margin: 30px 0;">
+
+            <h3>إدارة الكائنات المسجلة</h3>
+            <!-- شريط البحث الخاص بلوحة التحكم -->
+            <input type="text" id="adminSearchInput" class="form-control" placeholder="ابحث في الكائنات للتعديل أو الحذف بسرعة...">
+
             <table>
                 <thead>
                     <tr>
+                        <th>#</th>
                         <th>الاسم العربي</th>
                         <th>الاسم العلمي</th>
                         <th>إجراءات</th>
@@ -92,7 +98,8 @@
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJtcXRvcHhhd3JyZ250Y3FxbnBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3OTIxMzQsImV4cCI6MjA5ODM2ODEzNH0.HoExHY9oNFdryWUC2u2UELLPfBNhH3P4L3zS03dvELA';
         const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // التحقق من الجلسة الحالية عند الفتح
+        let allOrganisms = [];
+
         supabase.auth.getSession().then(({ data: { session } }) => {
             if (session) showPanel();
         });
@@ -118,21 +125,39 @@
         function showPanel() {
             document.getElementById('loginSection').style.display = 'none';
             document.getElementById('adminPanel').style.display = 'block';
-            loadAdminTable();
+            loadAdminData();
         }
 
-        async function loadAdminTable() {
-            const { data, error } = await supabase.from('organisms').select('*');
-            if (error) return;
+        // جلب البيانات مع تجاوز حد 1000 نتيجة (حتى 10,000 سجل)
+        async function loadAdminData() {
+            const { data, error } = await supabase
+                .from('organisms')
+                .select('*')
+                .range(0, 9999); // جلب حتى 10 آلاف سجل لتجاوز حد الألف نتيجة
 
+            if (error) {
+                console.error(error);
+                return;
+            }
+            allOrganisms = data;
+            renderAdminTable(allOrganisms);
+        }
+
+        function renderAdminTable(items) {
             const tbody = document.getElementById('adminTableBody');
             tbody.innerHTML = '';
 
-            data.forEach(org => {
+            if (items.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">لا توجد نتائج مطابقة.</td></tr>';
+                return;
+            }
+
+            items.forEach((org, index) => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
+                    <td>${index + 1}</td>
                     <td>${org.name_ar || ''}</td>
-                    <td>${org.scientific_name || ''}</td>
+                    <td><i>${org.scientific_name || ''}</i></td>
                     <td>
                         <button onclick="window.editOrg('${org.id}')">تعديل</button>
                         <button class="btn-danger" onclick="window.deleteOrg('${org.id}')">حذف</button>
@@ -141,6 +166,16 @@
                 tbody.appendChild(tr);
             });
         }
+
+        // تفعيل البحث داخل لوحة التحكم
+        document.getElementById('adminSearchInput').addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            const filtered = allOrganisms.filter(o => 
+                (o.name_ar && o.name_ar.toLowerCase().includes(term)) || 
+                (o.scientific_name && o.scientific_name.toLowerCase().includes(term))
+            );
+            renderAdminTable(filtered);
+        });
 
         document.getElementById('saveOrgBtn').onclick = async () => {
             const id = document.getElementById('editOrgId').value;
@@ -167,23 +202,23 @@
             }
 
             resetForm();
-            loadAdminTable();
+            loadAdminData();
         };
 
         window.editOrg = async function(id) {
-            const { data, error } = await supabase.from('organisms').select('*').eq('id', id).single();
-            if (error || !data) return;
+            const org = allOrganisms.find(o => o.id === id);
+            if (!org) return;
 
-            document.getElementById('editOrgId').value = data.id;
-            document.getElementById('nameAr').value = data.name_ar || '';
-            document.getElementById('scientificName').value = data.scientific_name || '';
-            document.getElementById('kingdom').value = data.kingdom || '';
-            document.getElementById('orgClass').value = data.class || '';
-            document.getElementById('conservationStatus').value = data.conservation_status || '';
-            document.getElementById('description').value = data.description || '';
-            document.getElementById('imageUrl').value = data.image || '';
-            document.getElementById('mapUrlInput').value = data['1'] || '';
-            document.getElementById('references').value = data.references || '';
+            document.getElementById('editOrgId').value = org.id;
+            document.getElementById('nameAr').value = org.name_ar || '';
+            document.getElementById('scientificName').value = org.scientific_name || '';
+            document.getElementById('kingdom').value = org.kingdom || '';
+            document.getElementById('orgClass').value = org.class || '';
+            document.getElementById('conservationStatus').value = org.conservation_status || '';
+            document.getElementById('description').value = org.description || '';
+            document.getElementById('imageUrl').value = org.image || '';
+            document.getElementById('mapUrlInput').value = org['1'] || '';
+            document.getElementById('references').value = org.references || '';
 
             document.getElementById('formTitle').innerText = 'تعديل بيانات الكائن الحي';
             document.getElementById('cancelEditBtn').style.display = 'inline-block';
@@ -194,7 +229,7 @@
             if (confirm('هل أنت متأكد من الحذف؟')) {
                 const { error } = await supabase.from('organisms').delete().eq('id', id);
                 if (error) alert('خطأ: ' + error.message);
-                else loadAdminTable();
+                else loadAdminData();
             }
         };
 
