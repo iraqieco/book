@@ -27,7 +27,6 @@
             padding: 20px;
         }
 
-        /* لوحة التحكم والتحضير للبدء */
         .control-panel {
             max-width: 900px;
             margin: 0 auto 20px auto;
@@ -85,7 +84,6 @@
             margin-top: 10px;
         }
 
-        /* شريط التقدم النسبة المئوية */
         .progress-container {
             width: 100%;
             background-color: #e0e0e0;
@@ -105,7 +103,6 @@
             transition: width 0.3s ease;
         }
 
-        /* شريط التنزيل العلوي بعد الانتهاء */
         .download-bar {
             max-width: 900px;
             margin: 0 auto 20px auto;
@@ -255,14 +252,18 @@
 </head>
 <body>
 
-    <!-- لوحة التحكم قبل البدء -->
     <div class="control-panel" id="controlPanel">
         <h2>⚙️ لوحة تحكم تأليف الكتب البيئية</h2>
         
         <div class="control-group">
             <label for="classSelect">اختر الصنف المراد البدء به:</label>
             <select id="classSelect">
-                <option value="all">جاري تحميل الأصناف...</option>
+                <option value="">اختر الصنف...</option>
+                <option value="طيور">طيور</option>
+                <option value="زواحف">زواحف</option>
+                <option value="ثدييات">ثدييات</option>
+              <option value="برمائيات">برمائيات</option>
+                <option value="نباتات">نباتات</option>
             </select>
         </div>
 
@@ -282,7 +283,6 @@
         </div>
     </div>
 
-    <!-- شريط التنزيل العلوي يظهر بعد الاكتمال -->
     <div class="download-bar" id="downloadBar" style="display:none;">
         <span>📚 تم تأليف الكتاب بنجاح: <strong id="bookCategoryName"></strong></span>
         <div>
@@ -291,7 +291,6 @@
         </div>
     </div>
 
-    <!-- حاوية الكتاب العرض المباشر -->
     <div class="book-container" id="bookContent">
         <div class="book-title-page">
             <h1>موسوعة عراقي إيكو</h1>
@@ -306,19 +305,23 @@
 
         let isRunning = false;
 
-        // جلب الأصناف المتاحة في القاعدة لتعبئتها في القائمة المنسدلة تلقائياً عند الفتح
+        // جلب الأصناف الفعليّة من القاعدة بطريقة خفيفة وسريعة
         async function loadAvailableClasses() {
-            const { data, error } = await supabase.from('organisms').select('class');
-            if (!error && data) {
-                const uniqueClasses = [...new Set(data.map(item => item.class))].filter(Boolean);
-                const select = document.getElementById('classSelect');
-                select.innerHTML = '';
-                uniqueClasses.forEach(cls => {
-                    const opt = document.createElement('option');
-                    opt.value = cls;
-                    opt.textContent = cls;
-                    select.appendChild(opt);
-                });
+            try {
+                const { data, error } = await supabase.from('organisms').select('class');
+                if (!error && data && data.length > 0) {
+                    const uniqueClasses = [...new Set(data.map(item => item.class))].filter(Boolean);
+                    const select = document.getElementById('classSelect');
+                    select.innerHTML = '<option value="">اختر الصنف...</option>';
+                    uniqueClasses.forEach(cls => {
+                        const opt = document.createElement('option');
+                        opt.value = cls;
+                        opt.textContent = cls;
+                        select.appendChild(opt);
+                    });
+                }
+            } catch (e) {
+                console.error("خطأ في جلب الأصناف:", e);
             }
         }
         loadAvailableClasses();
@@ -358,7 +361,7 @@
             const progressContainer = document.getElementById('progressContainer');
             
             if (!selectedClass) {
-                alert("الرجاء اختيار صنف صحيح أولاً.");
+                alert("الرجاء اختيار صنف صحيح من القائمة أولاً.");
                 return;
             }
 
@@ -368,7 +371,6 @@
             progressContainer.style.display = 'block';
             document.getElementById('downloadBar').style.display = 'none';
 
-            // جلب السجلات بناءً على الصنف المختار
             let query = supabase.from('organisms').select('*');
             if (mode === 'single') {
                 query = query.eq('class', selectedClass);
@@ -377,16 +379,15 @@
             const { data: records, error } = await query;
 
             if (error || !records || records.length === 0) {
-                container.innerHTML = `<h1>عذراً</h1><p style="text-align:center; color:red;">لا توجد سجلات مطابقة في قاعدة البيانات.</p>';
+                container.innerHTML = `<h1>عذراً</h1><p style="text-align:center; color:red;">لا توجد سجلات مطابقة في قاعدة البيانات.</p>`;
                 stopGeneration();
                 return;
             }
 
-            // رسم غلاف الكتاب الأول
             let bookHTML = `
                 <div class="book-title-page">
                     <h1>الموسوعة البيئية العراقية</h1>
-                    <h3>سجل أصناف الحياة البرية</h3>
+                    <h3>سجل أصناف: (${selectedClass})</h3>
                     <p style="margin-top: 30px; color: #555;">منصة عراقي إيكو - توثيق علمي ومصادر معتمدة</p>
                 </div>
             `;
@@ -394,12 +395,11 @@
 
             let total = records.length;
             for (let i = 0; i < total; i++) {
-                if (!isRunning) break; // في حال ضغط المستخدم على إيقاف
+                if (!isRunning) break;
 
                 let record = records[i];
                 const extData = await fetchExternalData(record.scientific_name);
 
-                // إضافة صفحة الكائن الجديد فوراً أمام عين المستخدم أثناء التأليف
                 bookHTML += `
                     <div class="page">
                         <div class="species-header">${record.name_ar || record.scientific_name} <span style="font-size: 18px; font-weight: normal; color: #2e6f5c;">(${record.scientific_name})</span></div>
@@ -449,7 +449,6 @@
 
                 container.innerHTML = bookHTML;
 
-                // تحديث نسبة وطول شريط التقدم لحظياً
                 let percent = Math.round(((i + 1) / total) * 100);
                 progressBar.style.width = percent + '%';
                 progressBar.innerText = `جاري التأليف: ${percent}% (${i + 1} من ${total})`;
@@ -464,7 +463,6 @@
             }
         }
 
-        // وظائف التنزيل
         function downloadPDF() {
             const element = document.getElementById('bookContent');
             const opt = {
