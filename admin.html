@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة تحكم المخول - عراقي إيكو</title>
+    <style>
+        body { font-family: Tahoma, sans-serif; background: #f4f6f9; color: #333; margin: 0; padding: 20px; }
+        .login-box, .admin-panel { max-width: 900px; margin: 30px auto; background: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        input, textarea, select { width: 100%; padding: 10px; margin: 8px 0 15px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button { background: #0066cc; color: #fff; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 16px; }
+        button:hover { background: #004d99; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: right; font-size: 14px; }
+        th { background: #0066cc; color: white; }
+        .btn-danger { background: #cc0000; }
+        .btn-danger:hover { background: #990000; }
+        .form-group { margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+
+    <!-- تسجيل الدخول -->
+    <div id="loginSection" class="login-box">
+        <h2>تسجيل دخول المخول</h2>
+        <p>الرجاء إدخال البريد الإلكتروني وكلمة المرور للمخول المسجل في النظام:</p>
+        <input type="email" id="adminEmail" placeholder="البريد الإلكتروني">
+        <input type="password" id="adminPassword" placeholder="كلمة المرور">
+        <button id="loginBtn">دخول</button>
+        <p id="loginError" style="color:red;"></p>
+    </div>
+
+    <!-- لوحة التحكم -->
+    <div id="adminPanel" class="admin-panel" style="display:none;">
+        <h2>لوحة إدارة الكائنات الحية</h2>
+        <button id="logoutBtn" style="background:#555; float:left;">تسجيل الخروج</button>
+        <div style="clear:both;"></div>
+        
+        <hr style="margin: 20px 0;">
+
+        <h3 id="formTitle">إضافة كائن حي جديد</h3>
+        <input type="hidden" id="editOrgId">
+        
+        <div class="form-group">
+            <label>الاسم العربي:</label>
+            <input type="text" id="nameAr">
+        </div>
+        <div class="form-group">
+            <label>الاسم العلمي / اللاتيني:</label>
+            <input type="text" id="scientificName">
+        </div>
+        <div class="form-group">
+            <label>المملكة:</label>
+            <input type="text" id="kingdom">
+        </div>
+        <div class="form-group">
+            <label>الصنف (Class):</label>
+            <input type="text" id="orgClass">
+        </div>
+        <div class="form-group">
+            <label>حالة الحفظ:</label>
+            <input type="text" id="conservationStatus">
+        </div>
+        <div class="form-group">
+            <label>الوصف:</label>
+            <textarea id="description" rows="5"></textarea>
+        </div>
+        
+        <!-- الطريقة الأولى للصورة: رابط خارجي في عمود image -->
+        <div class="form-group">
+            <label>رابط صورة خارجي (تُحفظ في عمود image):</label>
+            <input type="url" id="imageUrl" placeholder="https://...">
+        </div>
+
+        <!-- الطريقة الثانية للصور: رفع متعدد لـ GitHub -->
+        <div class="form-group">
+            <label>رفع صور متعددة للملف (تُحفظ فعلياً في مستودع GitHub):</label>
+            <input type="file" id="githubImagesInput" multiple accept="image/*">
+        </div>
+
+        <!-- خريطة التوزيع: الخيار الأول (رابط في العمود 1) أو الخيار الثاني (رفع إلى GitHub) -->
+        <div class="form-group">
+            <label>خريطة التوزيع (إما إدخال رابط خارجي يحفظ في العمود "1"، أو رفع صورة جديدة لـ GitHub):</label>
+            <input type="url" id="mapUrlInput" placeholder="رابط خريطة خارجي (يحفظ في العمود 1)">
+            <input type="file" id="mapFileInput" accept="image/*" style="margin-top:5px;">
+        </div>
+
+        <div class="form-group">
+            <label>المراجع والمصادر:</label>
+            <textarea id="references" rows="2"></textarea>
+        </div>
+
+        <button id="saveOrgBtn">حفظ البيانات</button>
+        <button id="cancelEditBtn" style="background:#888; display:none;">إلغاء التعديل</button>
+
+        <h3 style="margin-top:40px;">قائمة الكائنات المسجلة</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>الاسم العربي</th>
+                    <th>الاسم العلمي</th>
+                    <th>إجراءات</th>
+                </tr>
+            </thead>
+            <tbody id="adminTableBody"></tbody>
+        </table>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
+        const SUPABASE_URL = 'https://rmqtopxawrrgntcqqnpa.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJtcXRvcHhhd3JyZ250Y3FxbnBhIiwicm9sZSI6InJhb24iLCJpYXQiOjE3ODI3OTIxMzQsImV4cCI6MjA5ODM2ODEzNH0.HoExHY9oNFdryWUC2u2UELLPfBNhH3P4L3zS03dvELA';
+        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // إعدادات GitHub (ضع حسابك، مستودعك، ورَمز الوصول Token هنا لتفعيل الرفع المباشر)
+        const GH_OWNER = 'اسم_حسابك_على_غيت_هب';
+        const GH_REPO = 'اسم_المستودع';
+        const GH_BRANCH = 'main';
+        const GH_TOKEN = 'ضع_رمز_الوصول_الشخصي_هنا_Token'; 
+
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session) showAdminPanel();
+        });
+
+        document.getElementById('loginBtn').onclick = async () => {
+            const email = document.getElementById('adminEmail').value;
+            const password = document.getElementById('adminPassword').value;
+            const { error } = await supabase.auth.signInWithPassword({ email, password });
+            if (error) {
+                document.getElementById('loginError').innerText = 'خطأ في تسجيل الدخول.';
+            } else {
+                showAdminPanel();
+            }
+        };
+
+        document.getElementById('logoutBtn').onclick = async () => {
+            await supabase.auth.signOut();
+            document.getElementById('adminPanel').style.display = 'none';
+            document.getElementById('loginSection').style.display = 'block';
+        };
+
+        function showAdminPanel() {
+            document.getElementById('loginSection').style.display = 'none';
+            document.getElementById('adminPanel').style.display = 'block';
+            loadAdminTable();
+        }
+
+        async function loadAdminTable() {
+            const { data, error } = await supabase.from('organisms').select('*');
+            if (error) return;
+            
+            const tbody = document.getElementById('adminTableBody');
+            tbody.innerHTML = '';
+            
+            data.forEach(org => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${org.name_ar || ''}</td>
+                    <td>${org.scientific_name || ''}</td>
+                    <td>
+                        <button onclick="window.editOrg('${org.id}')">تعديل</button>
+                        <button class="btn-danger" onclick="window.deleteOrg('${org.id}')">حذف</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function uploadSingleFileToGitHub(file) {
+            const reader = new FileReader();
+            const base64Content = await new Promise((resolve) => {
+                reader.onload = (e) => resolve(e.target.result.split(',')[1]);
+                reader.readAsDataURL(file);
+            });
+
+            const fileName = `uploads/map_${Date.now()}_${file.name}`;
+            const response = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${fileName}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `token ${GH_TOKEN}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    message: `Upload map image ${file.name}`,
+                    content: base64Content,
+                    branch: GH_BRANCH
+                })
+            });
+
+            if (response.ok) {
+                return `https://raw.githubusercontent.com/${GH_OWNER}/${GH_REPO}/${GH_BRANCH}/${fileName}`;
+            }
+            return null;
+        }
+
+        async function uploadMultipleFilesToGitHub(filesInput) {
+            const files = filesInput.files;
+            let uploadedUrls = [];
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const reader = new FileReader();
+                const base64Content = await new Promise((resolve) => {
+                    reader.onload = (e) => resolve(e.target.result.split(',')[1]);
+                    reader.readAsDataURL(file);
+                });
+
+                const fileName = `uploads/${Date.now()}_${file.name}`;
+                const response = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${fileName}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${GH_TOKEN}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: `Upload image ${file.name}`,
+                        content: base64Content,
+                        branch: GH_BRANCH
+                    })
+                });
+
+                if (response.ok) {
+                    uploadedUrls.push(`https://raw.githubusercontent.com/${GH_OWNER}/${GH_REPO}/${GH_BRANCH}/${fileName}`);
+                }
+            }
+            return uploadedUrls;
+        }
+
+        document.getElementById('saveOrgBtn').onclick = async () => {
+            const id = document.getElementById('editOrgId').value;
+            const name_ar = document.getElementById('nameAr').value;
+            const scientific_name = document.getElementById('scientificName').value;
+            const kingdom = document.getElementById('kingdom').value;
+            const orgClass = document.getElementById('orgClass').value;
+            const conservation_status = document.getElementById('conservationStatus').value;
+            const description = document.getElementById('description').value;
+            const image = document.getElementById('imageUrl').value;
+            const references = document.getElementById('references').value;
+
+            // معالجة خريطة التوزيع (العمود "1")
+            let mapValue = document.getElementById('mapUrlInput').value;
+            const mapFile = document.getElementById('mapFileInput').files[0];
+            if (mapFile && GH_TOKEN !== 'ضع_رمز_الوصول_الشخصي_هنا_Token') {
+                const uploadedMapUrl = await uploadSingleFileToGitHub(mapFile);
+                if (uploadedMapUrl) mapValue = uploadedMapUrl;
+            }
+
+            // صور GitHub المتعددة
+            const filesInput = document.getElementById('githubImagesInput');
+            let githubImageUrls = [];
+            if (filesInput.files.length > 0 && GH_TOKEN !== 'ضع_رمز_الوصول_الشخصي_هنا_Token') {
+                githubImageUrls = await uploadMultipleFilesToGitHub(filesInput);
+            }
+
+            const payload = {
+                name_ar,
+                scientific_name,
+                kingdom,
+                class: orgClass,
+                conservation_status,
+                description,
+                image,
+                '1': mapValue, // حفظ رابط خريطة التوزيع في العمود المسمى "1"
+                references
+            };
+
+            if (githubImageUrls.length > 0) {
+                payload.images_github = JSON.stringify(githubImageUrls);
+            }
+
+            if (id) {
+                const { error } = await supabase.from('organisms').update(payload).eq('id', id);
+                if (error) alert('خطأ في التعديل: ' + error.message);
+                else alert('تم التعديل بنجاح');
+            } else {
+                const { error } = await supabase.from('organisms').insert([payload]);
+                if (error) alert('خطأ في الإضافة: ' + error.message);
+                else alert('تمت الإضافة بنجاح');
+            }
+
+            resetForm();
+            loadAdminTable();
+        };
+
+        window.editOrg = async function(id) {
+            const { data, error } = await supabase.from('organisms').select('*').eq('id', id).single();
+            if (error || !data) return;
+
+            document.getElementById('editOrgId').value = data.id;
+            document.getElementById('nameAr').value = data.name_ar || '';
+            document.getElementById('scientificName').value = data.scientific_name || '';
+            document.getElementById('kingdom').value = data.kingdom || '';
+            document.getElementById('orgClass').value = data.class || '';
+            document.getElementById('conservationStatus').value = data.conservation_status || '';
+            document.getElementById('description').value = data.description || '';
+            document.getElementById('imageUrl').value = data.image || '';
+            document.getElementById('mapUrlInput').value = data['1'] || ''; // جلب قيمة العمود "1"
+            document.getElementById('references').value = data.references || '';
+            
+            document.getElementById('formTitle').innerText = 'تعديل بيانات الكائن الحي';
+            document.getElementById('cancelEditBtn').style.display = 'inline-block';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        window.deleteOrg = async function(id) {
+            if (confirm('هل أنت متأكد من حذف هذا الكائن؟')) {
+                const { error } = await supabase.from('organisms').delete().eq('id', id);
+                if (error) alert('خطأ في الحذف: ' + error.message);
+                else loadAdminTable();
+            }
+        };
+
+        document.getElementById('cancelEditBtn').onclick = () => resetForm();
+
+        function resetForm() {
+            document.getElementById('editOrgId').value = '';
+            document.getElementById('nameAr').value = '';
+            document.getElementById('scientificName').value = '';
+            document.getElementById('kingdom').value = '';
+            document.getElementById('orgClass').value = '';
+            document.getElementById('conservationStatus').value = '';
+            document.getElementById('description').value = '';
+            document.getElementById('imageUrl').value = '';
+            document.getElementById('githubImagesInput').value = '';
+            document.getElementById('mapUrlInput').value = '';
+            document.getElementById('mapFileInput').value = '';
+            document.getElementById('references').value = '';
+            document.getElementById('formTitle').innerText = 'إضافة كائن حي جديد';
+            document.getElementById('cancelEditBtn').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
