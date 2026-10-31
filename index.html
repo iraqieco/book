@@ -49,23 +49,45 @@
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
         const SUPABASE_URL = 'https://rmqtopxawrrgntcqqnpa.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJtcXRvcHhhd3JyZ250Y3FxbnBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3OTIxMzQsImV4cCI6MjA5ODM2ODEzNH0.HoExHY9oNFdryWUC2u2UELLPfBNhH3P4L3zS03dvELA';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJtcXRvcHhhd3JyZ250Y3FxbnBhIiwicm9sZSI6InJhb24iLCJpYXQiOjE3ODI3OTIxMzQsImV4cCI6MjA5ODM2ODEzNH0.HoExHY9oNFdryWUC2u2UELLPfBNhH3P4L3zS03dvELA';
         const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let allOrganisms = [];
 
-        async function fetchOrganisms() {
-            // جلب البيانات مع تجاوز حد 1000 نتيجة (حتى 10,000 سجل)
-            const { data, error } = await supabase
-                .from('organisms')
-                .select('*')
-                .range(0, 9999);
+        // دالة لجلب كافة البيانات دفعة بعد دفعة لتجاوز حد الـ 1000 نتيجة نهائياً
+        async function fetchAllOrganisms() {
+            let allData = [];
+            let limit = 1000;
+            let from = 0;
+            let hasMore = true;
 
-            if (error) {
-                console.error(error);
-                return;
+            while (hasMore) {
+                const { data, error } = await supabase
+                    .from('organisms')
+                    .select('*')
+                    .range(from, from + limit - 1);
+
+                if (error) {
+                    console.error('خطأ في جلب البيانات:', error);
+                    break;
+                }
+
+                if (data && data.length > 0) {
+                    allData = allData.concat(data);
+                    if (data.length < limit) {
+                        hasMore = false; // تم جلب كافة البيانات لعدم وجود المزيد
+                    } else {
+                        from += limit;
+                    }
+                } else {
+                    hasMore = false;
+                }
             }
-            allOrganisms = data;
+            return allData;
+        }
+
+        async function init() {
+            allOrganisms = await fetchAllOrganisms();
             renderTable(allOrganisms);
         }
 
@@ -101,7 +123,7 @@
             renderTable(filtered);
         });
 
-        fetchOrganisms();
+        init();
     </script>
 </body>
 </html>
