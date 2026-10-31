@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>موسوعة عراقي إيكو - الكتب التخصصية</title>
+    <title>موسوعة عراقي إيكو - لوحة تأليف الكتب التخصصية</title>
     <!-- استدعاء Supabase Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- استدعاء مكتبات تحويل وتنزيل PDF و Word -->
@@ -27,7 +27,85 @@
             padding: 20px;
         }
 
-        /* شريط التحكم والتنزيل العلوي */
+        /* لوحة التحكم والتحضير للبدء */
+        .control-panel {
+            max-width: 900px;
+            margin: 0 auto 20px auto;
+            background: #ffffff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(27, 77, 62, 0.15);
+            border-top: 6px solid var(--primary-dark);
+        }
+
+        .control-panel h2 {
+            color: var(--primary-dark);
+            margin-top: 0;
+            font-size: 22px;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .control-group label {
+            font-weight: bold;
+            font-size: 14px;
+            color: var(--primary-medium);
+        }
+
+        .control-group select, .control-group button {
+            padding: 10px;
+            font-family: 'Traditional Arabic', serif;
+            font-size: 16px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-start {
+            background-color: var(--primary-dark);
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            transition: 0.2s;
+        }
+        .btn-start:hover { background-color: var(--primary-medium); }
+
+        .btn-stop {
+            background-color: #d32f2f;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            display: none;
+            margin-top: 10px;
+        }
+
+        /* شريط التقدم النسبة المئوية */
+        .progress-container {
+            width: 100%;
+            background-color: #e0e0e0;
+            border-radius: 4px;
+            margin-top: 15px;
+            overflow: hidden;
+            display: none;
+        }
+        .progress-bar {
+            width: 0%;
+            height: 22px;
+            background-color: var(--primary-medium);
+            text-align: center;
+            color: white;
+            font-size: 13px;
+            line-height: 22px;
+            transition: width 0.3s ease;
+        }
+
+        /* شريط التنزيل العلوي بعد الانتهاء */
         .download-bar {
             max-width: 900px;
             margin: 0 auto 20px auto;
@@ -51,11 +129,6 @@
             cursor: pointer;
             font-family: 'Traditional Arabic', serif;
             font-size: 15px;
-            transition: 0.2s;
-        }
-
-        .download-bar button:hover {
-            background-color: var(--primary-light);
         }
 
         .book-container {
@@ -67,11 +140,12 @@
             border-radius: 4px;
             border-top: 8px solid var(--primary-dark);
             border-bottom: 8px solid var(--primary-dark);
+            min-height: 500px;
         }
 
         .book-title-page {
             text-align: center;
-            height: 800px;
+            height: 700px;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -124,7 +198,6 @@
             border-right: 3px solid var(--primary-medium);
         }
 
-        /* شارات حالة الحفظ IUCN */
         .iucn-badge {
             display: block;
             padding: 6px 12px;
@@ -182,32 +255,73 @@
 </head>
 <body>
 
-    <!-- شريط الأزرار لتصدير وتنزيل الكتاب -->
+    <!-- لوحة التحكم قبل البدء -->
+    <div class="control-panel" id="controlPanel">
+        <h2>⚙️ لوحة تحكم تأليف الكتب البيئية</h2>
+        
+        <div class="control-group">
+            <label for="classSelect">اختر الصنف المراد البدء به:</label>
+            <select id="classSelect">
+                <option value="all">جاري تحميل الأصناف...</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="modeSelect">طريقة التأليف:</label>
+            <select id="modeSelect">
+                <option value="single">تأليف هذا الصنف فقط ثم التوقف</option>
+                <option value="all">استمرار وتأليف جميع الأصناف تباعاً حتى النهاية</option>
+            </select>
+        </div>
+
+        <button class="btn-start" onclick="startGeneration()">بدء تأليف الكتاب 🚀</button>
+        <button class="btn-stop" id="stopBtn" onclick="stopGeneration()">إيقاف العملية ⏹️</button>
+
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar" id="progressBar">0%</div>
+        </div>
+    </div>
+
+    <!-- شريط التنزيل العلوي يظهر بعد الاكتمال -->
     <div class="download-bar" id="downloadBar" style="display:none;">
-        <span>📚 كتاب صنف: <strong id="bookCategoryName"></strong></span>
+        <span>📚 تم تأليف الكتاب بنجاح: <strong id="bookCategoryName"></strong></span>
         <div>
             <button onclick="downloadPDF()">تنزيل PDF 📥</button>
             <button onclick="downloadWord()" style="margin-right: 10px;">تنزيل ملف Word 📝</button>
         </div>
     </div>
 
+    <!-- حاوية الكتاب العرض المباشر -->
     <div class="book-container" id="bookContent">
         <div class="book-title-page">
-            <h1>جاري تجميع وتأليف الكتاب التخصصي...</h1>
-            <p>الرجاء الانتظار قليلاً ريثما يتم الاتصال بقاعدة البيانات وجلب البيانات</p>
+            <h1>موسوعة عراقي إيكو</h1>
+            <p>اختر الصنف من لوحة التحكم بالأعلى واضغط على "بدء تأليف الكتاب" لمشاهدة الصفحات تتشكل لحظة بلحظة.</p>
         </div>
     </div>
 
     <script>
-        // إعدادات اتصال Supabase (تم ربطها ببيانات مشروعك مباشرة)
         const SUPABASE_URL = 'https://rmqtopxawrrgntcqqnpa.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJtcXRvcHhhd3JyZ250Y3FxbnBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3OTIxMzQsImV4cCI6MjA5ODM2ODEzNH0.HoExHY9oNFdryWUC2u2UELLPfBNhH3P4L3zS03dvELA';
         const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // قراءة الصنف من الرابط (مثلاً: ?class=طيور)
-        const urlParams = new URLSearchParams(window.location.search);
-        const targetClass = urlParams.get('class') || 'طيور';
-        document.getElementById('bookCategoryName').innerText = targetClass;
+        let isRunning = false;
+
+        // جلب الأصناف المتاحة في القاعدة لتعبئتها في القائمة المنسدلة تلقائياً عند الفتح
+        async function loadAvailableClasses() {
+            const { data, error } = await supabase.from('organisms').select('class');
+            if (!error && data) {
+                const uniqueClasses = [...new Set(data.map(item => item.class))].filter(Boolean);
+                const select = document.getElementById('classSelect');
+                select.innerHTML = '';
+                uniqueClasses.forEach(cls => {
+                    const opt = document.createElement('option');
+                    opt.value = cls;
+                    opt.textContent = cls;
+                    select.appendChild(opt);
+                });
+            }
+        }
+        loadAvailableClasses();
 
         async function fetchExternalData(scientificName) {
             try {
@@ -229,30 +343,63 @@
             }
         }
 
-        async function generateClassBook() {
+        function stopGeneration() {
+            isRunning = false;
+            document.getElementById('stopBtn').style.display = 'none';
+            document.querySelector('.btn-start').style.display = 'inline-block';
+            alert("تم إيقاف عملية التأليف بناءً على طلبك.");
+        }
+
+        async function startGeneration() {
+            const selectedClass = document.getElementById('classSelect').value;
+            const mode = document.getElementById('modeSelect').value;
             const container = document.getElementById('bookContent');
-
-            const { data: records, error } = await supabase
-                .from('organisms')
-                .select('*')
-                .eq('class', targetClass);
-
-            if (error || !records || records.length === 0) {
-                container.innerHTML = `<h1>عذراً</h1><p style="text-align:center; color:red;">لا توجد سجلات مطابقة للصنف (${targetClass}) في قاعدة البيانات.</p>`;
+            const progressBar = document.getElementById('progressBar');
+            const progressContainer = document.getElementById('progressContainer');
+            
+            if (!selectedClass) {
+                alert("الرجاء اختيار صنف صحيح أولاً.");
                 return;
             }
 
+            isRunning = true;
+            document.querySelector('.btn-start').style.display = 'none';
+            document.getElementById('stopBtn').style.display = 'inline-block';
+            progressContainer.style.display = 'block';
+            document.getElementById('downloadBar').style.display = 'none';
+
+            // جلب السجلات بناءً على الصنف المختار
+            let query = supabase.from('organisms').select('*');
+            if (mode === 'single') {
+                query = query.eq('class', selectedClass);
+            }
+
+            const { data: records, error } = await query;
+
+            if (error || !records || records.length === 0) {
+                container.innerHTML = `<h1>عذراً</h1><p style="text-align:center; color:red;">لا توجد سجلات مطابقة في قاعدة البيانات.</p>';
+                stopGeneration();
+                return;
+            }
+
+            // رسم غلاف الكتاب الأول
             let bookHTML = `
                 <div class="book-title-page">
                     <h1>الموسوعة البيئية العراقية</h1>
-                    <h3>سجل صنف: (${targetClass})</h3>
+                    <h3>سجل أصناف الحياة البرية</h3>
                     <p style="margin-top: 30px; color: #555;">منصة عراقي إيكو - توثيق علمي ومصادر معتمدة</p>
                 </div>
             `;
+            container.innerHTML = bookHTML;
 
-            for (let record of records) {
+            let total = records.length;
+            for (let i = 0; i < total; i++) {
+                if (!isRunning) break; // في حال ضغط المستخدم على إيقاف
+
+                let record = records[i];
                 const extData = await fetchExternalData(record.scientific_name);
 
+                // إضافة صفحة الكائن الجديد فوراً أمام عين المستخدم أثناء التأليف
                 bookHTML += `
                     <div class="page">
                         <div class="species-header">${record.name_ar || record.scientific_name} <span style="font-size: 18px; font-weight: normal; color: #2e6f5c;">(${record.scientific_name})</span></div>
@@ -299,18 +446,30 @@
                         </div>
                     </div>
                 `;
+
+                container.innerHTML = bookHTML;
+
+                // تحديث نسبة وطول شريط التقدم لحظياً
+                let percent = Math.round(((i + 1) / total) * 100);
+                progressBar.style.width = percent + '%';
+                progressBar.innerText = `جاري التأليف: ${percent}% (${i + 1} من ${total})`;
             }
 
-            container.innerHTML = bookHTML;
-            document.getElementById('downloadBar').style.display = 'flex';
+            if (isRunning) {
+                document.getElementById('bookCategoryName').innerText = selectedClass;
+                document.getElementById('downloadBar').style.display = 'flex';
+                document.getElementById('stopBtn').style.display = 'none';
+                document.querySelector('.btn-start').style.display = 'inline-block';
+                isRunning = false;
+            }
         }
 
-        // وظيفة تنزيل الكتاب بصيغة PDF
+        // وظائف التنزيل
         function downloadPDF() {
             const element = document.getElementById('bookContent');
             const opt = {
                 margin:       10,
-                filename:     `کتاب_${targetClass}_عراقي_إيكو.pdf`,
+                filename:     `کتاب_الموسوعة_عراقي_إيكو.pdf`,
                 image:        { type: 'jpeg', quality: 0.98 },
                 html2canvas:  { scale: 2, useCORS: true },
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
@@ -318,20 +477,16 @@
             html2pdf().from(element).set(opt).save();
         }
 
-        // وظيفة تنزيل الكتاب بصيغة ملف Word قابل للتعديل (.docx)
         function downloadWord() {
             const contentHTML = document.getElementById('bookContent').innerHTML;
             const converted = htmlDocx.asBlob(`<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>${contentHTML}</body></html>`);
-            
             const link = document.createElement('a');
             link.href = URL.createObjectURL(converted);
-            link.download = `کتاب_${targetClass}_عراقي_إيكو.docx`;
+            link.download = `کتاب_الموسوعة_عراقي_إيكو.docx`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
         }
-
-        generateClassBook();
     </script>
 </body>
 </html>
