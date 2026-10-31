@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تفاصيل الكائن الحي</title>
+    <style>
+        body { font-family: Tahoma, sans-serif; background: #fff; color: #222; line-height: 1.8; margin: 0; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .back-link { display: inline-block; margin-bottom: 20px; color: #0066cc; text-decoration: none; }
+        h1 { margin-bottom: 5px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .scientific { font-style: italic; color: #555; font-size: 18px; margin-bottom: 15px; }
+        .meta-box { background: #f8f9fa; border-right: 4px solid #0066cc; padding: 10px 15px; margin-bottom: 20px; }
+        .images-gallery { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+        .images-gallery img { width: 150px; height: 150px; object-fit: cover; border-radius: 4px; border: 1px solid #ddd; }
+        .map-section { margin-top: 30px; border-top: 1px solid #eee; padding-top: 15px; }
+        .map-section img { max-width: 100%; height: auto; border-radius: 4px; }
+        .wiki-term { color: #0645ad; border-bottom: 1px dotted #0645ad; cursor: pointer; position: relative; }
+        .references-section { margin-top: 40px; border-top: 1px solid #ccc; padding-top: 15px; font-size: 14px; color: #555; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <a href="index.html" class="back-link">← العودة إلى القائمة الرئيسية</a>
+        
+        <h1 id="orgNameAr">جاري التحميل...</h1>
+        <div class="scientific" id="orgScientificName"></div>
+
+        <div class="meta-box">
+            <p><strong>المملكة:</strong> <span id="orgKingdom"></span></p>
+            <p><strong>الصنف:</strong> <span id="orgClass"></span></p>
+            <p><strong>حالة الحفظ:</strong> <span id="orgStatus"></span></p>
+        </div>
+
+        <h3>معرض الصور</h3>
+        <div class="images-gallery" id="orgImagesGallery"></div>
+
+        <h3>الوصف</h3>
+        <div id="orgDescription"></div>
+
+        <div class="map-section" id="mapContainer" style="display:none;">
+            <h3>خريطة التوزيع الجغرافي</h3>
+            <img id="orgMapImage" src="" alt="خريطة التوزيع">
+        </div>
+
+        <div class="references-section" id="orgReferences" style="display:none;">
+            <h3>المصادر والمراجع والهوامش</h3>
+            <p id="orgReferencesText"></p>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
+        const SUPABASE_URL = 'https://rmqtopxawrrgntcqqnpa.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJtcXRvcHhhd3JyZ250Y3FxbnBhIiwicm9sZSI6InJhb24iLCJpYXQiOjE3ODI3OTIxMzQsImV4cCI6MjA5ODM2ODEzNH0.HoExHY9oNFdryWUC2u2UELLPfBNhH3P4L3zS03dvELA';
+        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const orgId = urlParams.get('id');
+
+        async function loadDetails() {
+            if (!orgId) {
+                document.body.innerHTML = '<h2>لم يتم تحديد الكائن الحي.</h2>';
+                return;
+            }
+
+            const { data, error } = await supabase.from('organisms').select('*').eq('id', orgId).single();
+            
+            if (error || !data) {
+                document.body.innerHTML = '<h2>عذراً، لم يتم العثور على الكائن المطلوب.</h2>';
+                return;
+            }
+
+            document.getElementById('orgNameAr').innerText = data.name_ar || '';
+            document.getElementById('orgScientificName').innerText = data.scientific_name || '';
+            document.getElementById('orgKingdom').innerText = data.kingdom || '-';
+            document.getElementById('orgClass').innerText = data.class || '-';
+            document.getElementById('orgStatus').innerText = data.conservation_status || '-';
+            
+            // معرض الصور (عبر عمود image الخارجي + صور GitHub إن وجدت)
+            const gallery = document.getElementById('orgImagesGallery');
+            gallery.innerHTML = '';
+            
+            if (data.image) {
+                const img = document.createElement('img');
+                img.src = data.image;
+                gallery.appendChild(img);
+            }
+
+            if (data.images_github) {
+                let githubImages = [];
+                try {
+                    githubImages = typeof data.images_github === 'string' ? JSON.parse(data.images_github) : data.images_github;
+                } catch(e) { githubImages = [data.images_github]; }
+
+                githubImages.forEach(url => {
+                    if(url) {
+                        const img = document.createElement('img');
+                        img.src = url;
+                        gallery.appendChild(img);
+                    }
+                });
+            }
+
+            // الوصف والمصطلحات التفاعلية
+            let desc = data.description || 'لا يوجد وصف متاح.';
+            desc = desc.replace(/(ديالى|بعقوبة|نهر ديالى)/g, '<span class="wiki-term" title="منطقة جغرافية بيئية في العراق">$1</span>');
+            document.getElementById('orgDescription').innerHTML = desc;
+
+            // خريطة التوزيع (تأتي من العمود 1 أو صورة مرفوعة)
+            if (data['1']) {
+                document.getElementById('mapContainer').style.display = 'block';
+                document.getElementById('orgMapImage').src = data['1'];
+            }
+
+            // المراجع
+            if (data.references) {
+                document.getElementById('orgReferences').style.display = 'block';
+                document.getElementById('orgReferencesText').innerText = data.references;
+            }
+        }
+
+        loadDetails();
+    </script>
+</body>
+</html>
