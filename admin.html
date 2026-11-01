@@ -227,8 +227,9 @@
             loadAdminData();
         };
 
-        window.editOrg = async function(id) {
-            const org = allOrganisms.find(o => o.id === id);
+                window.editOrg = async function(id) {
+            // استخدام == بدلاً من === لضمان مطابقة الـ id سواء كان نصاً أو رقماً
+            const org = allOrganisms.find(o => o.id == id);
             if (!org) return;
 
             document.getElementById('editOrgId').value = org.id;
@@ -246,6 +247,7 @@
             document.getElementById('cancelEditBtn').style.display = 'inline-block';
             window.scrollTo({ top: 0, behavior: 'smooth' });
         };
+
 
         window.deleteOrg = async function(id) {
             if (confirm('هل أنت متأكد من الحذف؟')) {
